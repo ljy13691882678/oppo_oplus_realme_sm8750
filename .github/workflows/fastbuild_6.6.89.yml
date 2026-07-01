@@ -248,15 +248,15 @@ jobs:
       - name: 添加KernelSU
         id: ksu_version
         run: |
-          # 进入内核工作目录
           cd kernel_workspace
           if [[ ${{ github.event.inputs.ksu_type }} == "sukisu" || ${{ github.event.inputs.ksu_type }} == "resukisu" ]]; then
-            echo "正在配置ReSukiSU（由于SukiSU长期未维护无法正常编译，且ReSukiSU兼容sukisu管理器，故SukiSU源码仓库已重定向为resukisu）..."
-            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s v4.1.0
+            echo "正在配置ReSukiSU (auto-hook)..."
+            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s auto-hook
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@cctv18"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
-            KSU_VERSION=$(expr $(git rev-list --count v4.1.0) + 30700 2>/dev/null || echo 114514)
-            # 存储版本号到 GitHub 环境变量
+            KSU_VERSION=$(expr $(git rev-list --count auto-hook) + 30700 2>/dev/null || echo 40800)
+            echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+            echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT            # 存储版本号到 GitHub 环境变量
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
           elif [[ ${{ github.event.inputs.ksu_type }} == "ksunext" ]]; then
