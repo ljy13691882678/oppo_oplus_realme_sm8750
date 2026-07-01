@@ -1,9 +1,53 @@
-import re
+import sys
 
-with open('arch/arm64/kernel/cpuinfo.c') as f:
+target = 'arch/arm64/kernel/cpuinfo.c'
+print(f"Reading {target}...")
+
+with open(target) as f:
     content = f.read()
 
-new_c_show = """static int c_show(struct seq_file *m, void *v)
+# 1. 先确认包含 c_show
+if 'c_show' not in content:
+    print("ERROR: c_show not found!")
+    sys.exit(1)
+
+# 2. 找到函数起始位置
+pos = content.find('static int c_show(struct seq_file *m, void *v)')
+if pos < 0:
+    pos = content.find('static int c_show (struct seq_file *m, void *v)')
+if pos < 0:
+    pos = content.find('int c_show(struct seq_file *m')
+if pos < 0:
+    print(f"ERROR: c_show signature not found. Searching for 'c_show'...")
+    # Print surrounding context
+    idx = content.find('c_show')
+    if idx >= 0:
+        print(f"Found 'c_show' at position {idx}:")
+        print(content[max(0,idx-50):idx+200])
+    sys.exit(1)
+
+print(f"Found c_show at position {pos}")
+
+# 3. 找到函数结束 (匹配大括号)
+brace_count = 0
+end = -1
+for i in range(pos, len(content)):
+    if content[i] == '{':
+        brace_count += 1
+    elif content[i] == '}':
+        brace_count -= 1
+        if brace_count == 0:
+            end = i + 1
+            break
+
+if end < 0:
+    print("ERROR: Could not find end of function")
+    sys.exit(1)
+
+print(f"Function ends at position {end}, length={end-pos}")
+
+# 4. 新函数体
+new_func = """static int c_show(struct seq_file *m, void *v)
 {
     int i;
     static const u32 fake_midr[] = {
@@ -32,48 +76,20 @@ new_c_show = """static int c_show(struct seq_file *m, void *v)
     return 0;
 }"""
 
-# Method 1: Try regex
-match = re.search(r'static int c_show$struct seq_file \*m, void \*v$', content)
-if not match:
-    print("ERROR: c_show() not found in cpuinfo.c!")
-    exit(1)
-
-start = match.start()
-# Find the closing brace of the function
-brace_count = 0
-end = start
-in_func = False
-for i in range(start, len(content)):
-    if content[i] == '{':
-        brace_count += 1
-        in_func = True
-    elif content[i] == '}':
-        brace_count -= 1
-        if in_func and brace_count == 0:
-            end = i + 1
-            break
-
-if end <= start:
-    print("ERROR: Could not find end of c_show()")
-    exit(1)
-
-# Include trailing newline
-while end < len(content) and content[end] in '\n\r':
-    end += 1
-
-print(f"c_show() found: chars {start} to {end}, replacing...")
-
-new_content = content[:start] + new_c_show + '\n\n' + content[end:]
-
-with open('arch/arm64/kernel/cpuinfo.c', 'w') as f:
+# 5. 替换
+new_content = content[:pos] + new_func + content[end:]
+with open(target, 'w') as f:
     f.write(new_content)
 
-# Verify
-with open('arch/arm64/kernel/cpuinfo.c') as f:
-    verify = f.read()
-
-if 'fake_midr' in verify and 'HiSilicon Kirin 9020' in verify:
-    print('VERIFIED: cpuinfo patched successfully!')
+# 6. 验证
+with open(target) as f:
+    check = f.read()
+if 'fake_midr' in check and 'HiSilicon Kirin 9020' in check:
+    print("VERIFIED: cpuinfo patched!")
 else:
-    print('FAILED: patch not applied!')
-    exit(1)
+    print("FAILED!")
+
+# 7. 打印确认行
+import os
+os.system("grep -c 'fake_midr' " + target)
+os.system("grep -c 'Kirin 9020' " + target)
