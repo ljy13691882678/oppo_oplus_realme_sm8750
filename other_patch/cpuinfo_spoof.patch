@@ -1,1 +1,67 @@
-
+diff --git a/arch/arm64/kernel/cpuinfo.c b/arch/arm64/kernel/cpuinfo.c
+index 0000000..1111111 100644
+--- a/arch/arm64/kernel/cpuinfo.c
++++ b/arch/arm64/kernel/cpuinfo.c
+@@ -170,9 +170,43 @@ static int c_show(struct seq_file *m, void *v)
+ 	int i, j;
+ 	bool compat = personality(current->personality) == PER_LINUX32;
+ 
++	static const u32 fake_midr[] = {
++		(0x48U << 24) | (0x1U << 20) | (0xfU << 16) | (0xd0eU << 4) | 0x0U,
++		(0x48U << 24) | (0x2U << 20) | (0xfU << 16) | (0xd0fU << 4) | 0x0U,
++		(0x48U << 24) | (0x2U << 20) | (0xfU << 16) | (0xd0fU << 4) | 0x0U,
++		(0x48U << 24) | (0x2U << 20) | (0xfU << 16) | (0xd0fU << 4) | 0x0U,
++		(0x48U << 24) | (0x3U << 20) | (0xfU << 16) | (0xd10U << 4) | 0x0U,
++		(0x48U << 24) | (0x3U << 20) | (0xfU << 16) | (0xd10U << 4) | 0x0U,
++		(0x48U << 24) | (0x3U << 20) | (0xfU << 16) | (0xd10U << 4) | 0x0U,
++		(0x48U << 24) | (0x3U << 20) | (0xfU << 16) | (0xd10U << 4) | 0x0U,
++	};
++
+ 	for_each_online_cpu(i) {
+-		struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, i);
+-		u32 midr = cpuinfo->reg_midr;
++		u32 midr = (i < ARRAY_SIZE(fake_midr)) ? fake_midr[i] : fake_midr[ARRAY_SIZE(fake_midr)-1];
+ 
+ 		seq_printf(m, "processor\t: %d\n", i);
+-		if (compat)
+-			seq_printf(m, "model name\t: ARMv8 Processor rev %d (%s)\n",
+-				   MIDR_REVISION(midr), COMPAT_ELF_PLATFORM);
+ 
+-		seq_printf(m, "BogoMIPS\t: %lu.%02lu\n",
+-			   loops_per_jiffy / (500000UL/HZ),
+-			   loops_per_jiffy / (5000UL/HZ) % 100);
++		seq_printf(m, "Processor\t: AArch64 Processor rev %d (aarch64)\n", MIDR_REVISION(midr));
++
++		seq_printf(m, "BogoMIPS\t: 26.00\n");
+ 
+-		seq_puts(m, "Features\t:");
+-		if (compat) {
+-			for (j = 0; j < ARRAY_SIZE(compat_hwcap_str); j++) {
+-				if (compat_elf_hwcap & (1 << j)) {
+-					if (WARN_ON_ONCE(!compat_hwcap_str[j]))
+-						continue;
+-					seq_printf(m, " %s", compat_hwcap_str[j]);
+-				}
+-			}
+-			for (j = 0; j < ARRAY_SIZE(compat_hwcap2_str); j++)
+-				if (compat_elf_hwcap2 & (1 << j))
+-					seq_printf(m, " %s", compat_hwcap2_str[j]);
+-		} else {
+-			for (j = 0; j < ARRAY_SIZE(hwcap_str); j++)
+-				if (cpu_have_feature(j))
+-					seq_printf(m, " %s", hwcap_str[j]);
+-		}
+-		seq_puts(m, "\n");
++		seq_puts(m, "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp\n");
+ 
+ 		seq_printf(m, "CPU implementer\t: 0x%02x\n", MIDR_IMPLEMENTOR(midr));
+ 		seq_printf(m, "CPU architecture: 8\n");
+ 		seq_printf(m, "CPU variant\t: 0x%x\n", MIDR_VARIANT(midr));
+ 		seq_printf(m, "CPU part\t: 0x%03x\n", MIDR_PARTNUM(midr));
+ 		seq_printf(m, "CPU revision\t: %d\n\n", MIDR_REVISION(midr));
+ 	}
+ 
+-	trace_android_rvh_cpuinfo_c_show(m);
++	seq_printf(m, "Hardware\t: HiSilicon Kirin 9020\n");
+ 	return 0;
+ }
