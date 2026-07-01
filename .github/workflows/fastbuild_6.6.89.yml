@@ -339,6 +339,13 @@ jobs:
           cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./crypto
           cp ../SukiSU_patch/other/zram/zram_patch/${{ env.KERNEL_VERSION }}/lz4kd.patch ./
           patch -p1 -F 3 < lz4kd.patch || true
+
+      - name: 应用 CPUInfo 伪装补丁
+        run: |
+          cd kernel_workspace/common
+          wget https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/other_patch/cpuinfo_spoof.patch
+          patch -p1 < cpuinfo_spoof.patch || true
+          echo 'CPUInfo spoof applied'
           
       - name: 添加SUSFS 配置项
         if: inputs.susfs_enable
@@ -552,13 +559,6 @@ jobs:
           sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
           echo "CONFIG_LOCALVERSION_AUTO=n" >> ./common/arch/arm64/configs/gki_defconfig
           
-      - name: 应用 CPUInfo 伪装补丁
-        run: |
-          cd kernel_workspace/common
-          wget https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/other_patch/cpuinfo_spoof.patch
-          patch -p1 -F 3 < cpuinfo_spoof.patch || true
-          echo "cpuinfo_spoof applied"
-     
       - name: 构建内核
         run: |
           WORKDIR="$(pwd)"
