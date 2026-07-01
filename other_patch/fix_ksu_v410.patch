@@ -1,0 +1,14 @@
+diff --git a/kernel/Kbuild b/kernel/Kbuild
+index 0000000..1111111 100644
+--- a/kernel/Kbuild
++++ b/kernel/Kbuild
+@@ -23,8 +23,8 @@ obj-$(CONFIG_KSU) += kernelsu.o
+ obj-$(CONFIG_KPM) += kpm/
+
+-REPO_OWNER := SukiSU-Ultra
+-REPO_NAME := SukiSU-Ultra
+-REPO_BRANCH := miuix
++REPO_OWNER := ReSukiSU
++REPO_NAME := ReSukiSU
++REPO_BRANCH := main
+ KSU_VERSION_API := 4.1.0
