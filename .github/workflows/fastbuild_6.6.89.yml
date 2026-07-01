@@ -254,8 +254,9 @@ jobs:
             curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s v4.1.0
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@cctv18"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
-            wget https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/other_patch/fix_ksu_v410.patch
-            patch -p1 < fix_ksu_v410.patch
+            sed -i 's/REPO_OWNER := SukiSU-Ultra/REPO_OWNER := ReSukiSU/' kernel/Kbuild
+            sed -i 's/REPO_NAME := SukiSU-Ultra/REPO_NAME := ReSukiSU/' kernel/Kbuild
+            sed -i 's/REPO_BRANCH := miuix/REPO_BRANCH := main/' kernel/Kbuild
             KSU_VERSION=$(expr $(git rev-list --count main) + 30700 2>/dev/null || echo 40800)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT            # 存储版本号到 GitHub 环境变量
