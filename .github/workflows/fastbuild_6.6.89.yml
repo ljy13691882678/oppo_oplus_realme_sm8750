@@ -257,7 +257,8 @@ jobs:
             sed -i 's/REPO_OWNER := SukiSU-Ultra/REPO_OWNER := ReSukiSU/' kernel/Kbuild
             sed -i 's/REPO_NAME := SukiSU-Ultra/REPO_NAME := ReSukiSU/' kernel/Kbuild
             sed -i 's/REPO_BRANCH := miuix/REPO_BRANCH := main/' kernel/Kbuild
-            echo 'CONFIG_KSU_MANAGER_PACKAGE="me.weishu.kernelsu"' >> ../common/arch/arm64/configs/gki_defconfig
+                        cd $GITHUB_WORKSPACE/kernel_workspace/common
+            echo 'CONFIG_KSU_MANAGER_PACKAGE="com.resukisu.resukisu"' >> arch/arm64/configs/gki_defconfig
             KSU_VERSION=$(expr $(git rev-list --count main) + 30700 2>/dev/null || echo 40800)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT            # 存储版本号到 GitHub 环境变量
