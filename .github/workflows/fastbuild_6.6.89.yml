@@ -245,7 +245,7 @@ jobs:
             ccache -sv
           fi
 
-            - name: 添加KernelSU
+      - name: 添加KernelSU
         id: ksu_version
         run: |
           cd kernel_workspace
