@@ -31,11 +31,14 @@ print(f"Function length: {end - pos}")
 new_func = """static int c_show(struct seq_file *m, void *v)
 {
     int i;
+
     /*
-     * Fake MIDR values:
-     *   CPU0-3:  implementer=0x48, variant=0x2, part=0xd24, rev=0
-     *   CPU4-6:  implementer=0x48, variant=0x2, part=0xd47, rev=0
-     *   CPU7:    implementer=0x48, variant=0x2, part=0xd06, rev=0
+     * 伪装 HiSilicon Kirin 9030S 8核心 CPU 参数:
+     *   CPU0-3:  implementer=0x48, variant=0x2, part=0xd24 (Cortex-A710级), rev=0
+     *   CPU4-6:  implementer=0x48, variant=0x2, part=0xd47 (Cortex-A715级), rev=0
+     *   CPU7:    implementer=0x48, variant=0x2, part=0xd06 (A510级), rev=0
+     *
+     *   所有核心统一 variant=0x2, implementer=0x48 (HiSilicon)
      */
     static const u32 fake_midr[] = {
         (0x48U << 24) | (0x2U << 20) | (0xfU << 16) | (0xd24U << 4) | 0x0U,
@@ -49,7 +52,9 @@ new_func = """static int c_show(struct seq_file *m, void *v)
     };
 
     for_each_online_cpu(i) {
-        u32 midr = (i < ARRAY_SIZE(fake_midr)) ? fake_midr[i] : fake_midr[ARRAY_SIZE(fake_midr)-1];
+        u32 midr = (i < ARRAY_SIZE(fake_midr))
+                   ? fake_midr[i]
+                   : fake_midr[ARRAY_SIZE(fake_midr) - 1];
 
         seq_printf(m, "Processor\\t: AArch64 Processor rev %d (aarch64)\\n",
                    MIDR_REVISION(midr));
@@ -60,15 +65,17 @@ new_func = """static int c_show(struct seq_file *m, void *v)
                     "lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm "
                     "dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 "
                     "frint svei8mm svebf16 i8mm bf16 dgh bti\\n");
-        seq_printf(m, "CPU implementer\\t: 0x%02x\\n", MIDR_IMPLEMENTOR(midr));
+        seq_printf(m, "CPU implementer\\t: 0x%02x\\n",
+                   MIDR_IMPLEMENTOR(midr));
         seq_printf(m, "CPU architecture: 8\\n");
         seq_printf(m, "CPU variant\\t: 0x%x\\n", MIDR_VARIANT(midr));
         seq_printf(m, "CPU part\\t: 0x%03x\\n", MIDR_PARTNUM(midr));
         seq_printf(m, "CPU revision\\t: %d\\n", MIDR_REVISION(midr));
-        seq_printf(m, "CPU physical\\t: %d\\n", i);
+        seq_printf(m, "CPU physical\\t: %d\\n\\n", i);
     }
 
     seq_printf(m, "Hardware\\t: HUAWEI Kirin9030S\\n");
+
     return 0;
 }"""
 
@@ -78,8 +85,8 @@ with open(target, 'w') as f:
 
 with open(target) as f:
     check = f.read()
-if 'fake_midr' in check and 'Kirin9030S' in check:
-    print("VERIFIED!")
+if 'fake_midr' in check and 'Kirin9030S' in check and 'CPU physical' in check:
+    print("VERIFIED! Spoof ready.")
 else:
     print("FAILED!")
     sys.exit(1)
