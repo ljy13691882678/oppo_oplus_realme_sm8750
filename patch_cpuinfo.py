@@ -1,7 +1,8 @@
-import sys
+import sys, re
 
+# ===== 1. 伪装 /proc/cpuinfo =====
 target = 'arch/arm64/kernel/cpuinfo.c'
-print(f"Reading {target}...")
+print(f"[1/2] Patching {target}...")
 
 with open(target) as f:
     content = f.read()
@@ -13,33 +14,20 @@ if pos < 0:
     print("ERROR: c_show not found!")
     sys.exit(1)
 
-print(f"Found at {pos}")
-
 brace_count = 0
 end = -1
 for i in range(pos, len(content)):
-    if content[i] == '{':
-        brace_count += 1
+    if content[i] == '{': brace_count += 1
     elif content[i] == '}':
         brace_count -= 1
         if brace_count == 0:
             end = i + 1
             break
 
-print(f"Function length: {end - pos}")
-
 new_func = """static int c_show(struct seq_file *m, void *v)
 {
     int i;
 
-    /*
-     * 伪装 HiSilicon Kirin 9030S 8核心 CPU 参数:
-     *   CPU0-3:  implementer=0x48, variant=0x2, part=0xd24 (Cortex-A710级), rev=0
-     *   CPU4-6:  implementer=0x48, variant=0x2, part=0xd47 (Cortex-A715级), rev=0
-     *   CPU7:    implementer=0x48, variant=0x2, part=0xd06 (A510级), rev=0
-     *
-     *   所有核心统一 variant=0x2, implementer=0x48 (HiSilicon)
-     */
     static const u32 fake_midr[] = {
         (0x48U << 24) | (0x2U << 20) | (0xfU << 16) | (0xd24U << 4) | 0x0U,
         (0x48U << 24) | (0x2U << 20) | (0xfU << 16) | (0xd24U << 4) | 0x0U,
@@ -85,8 +73,8 @@ with open(target, 'w') as f:
 
 with open(target) as f:
     check = f.read()
-if 'fake_midr' in check and 'Kirin9030S' in check and 'CPU physical' in check:
-    print("VERIFIED! Spoof ready.")
+if 'fake_midr' in check and 'Kirin9030S' in check:
+    print("  [OK] cpuinfo patched")
 else:
-    print("FAILED!")
+    print("  [FAIL]")
     sys.exit(1)
