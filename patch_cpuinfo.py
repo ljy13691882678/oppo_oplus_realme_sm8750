@@ -1,7 +1,8 @@
-import sys
+import sys, re
 
+# ===== 1. 伪装 /proc/cpuinfo 中的 c_show() =====
 target = 'arch/arm64/kernel/cpuinfo.c'
-print(f"Reading {target}...")
+print(f"[1/2] Patching {target}...")
 
 with open(target) as f:
     content = f.read()
@@ -13,32 +14,27 @@ if pos < 0:
     print("ERROR: c_show not found!")
     sys.exit(1)
 
-print(f"Found at {pos}")
+print(f"  Found at pos {pos}")
 
 brace_count = 0
 end = -1
 for i in range(pos, len(content)):
-    if content[i] == '{':
-        brace_count += 1
+    if content[i] == '{': brace_count += 1
     elif content[i] == '}':
         brace_count -= 1
         if brace_count == 0:
             end = i + 1
             break
 
-print(f"Function length: {end - pos}")
-
 new_func = """static int c_show(struct seq_file *m, void *v)
 {
     int i;
 
     /*
-     * 伪装 HiSilicon Kirin 9030S 8核心 CPU 参数:
-     *   CPU0-3:  implementer=0x48, variant=0x2, part=0xd24 (Cortex-A710级), rev=0
-     *   CPU4-6:  implementer=0x48, variant=0x2, part=0xd47 (Cortex-A715级), rev=0
-     *   CPU7:    implementer=0x48, variant=0x2, part=0xd06 (A510级), rev=0
-     *
-     *   所有核心统一 variant=0x2, implementer=0x48 (HiSilicon)
+     * Spoof CPU info -> HUAWEI Pura 90 Pro Max (Kirin9030S)
+     * CPU0-3: part=0xd24 (mid-core), CPU4-6: part=0xd47 (big-core)
+     * CPU7:   part=0xd06 (small-core)
+     * All: implementer=0x48 (HiSilicon), variant=0x2, rev=0
      */
     static const u32 fake_midr[] = {
         (0x48U << 24) | (0x2U << 20) | (0xfU << 16) | (0xd24U << 4) | 0x0U,
@@ -74,7 +70,7 @@ new_func = """static int c_show(struct seq_file *m, void *v)
         seq_printf(m, "CPU physical\\t: %d\\n\\n", i);
     }
 
-    seq_printf(m, "Hardware\\t: HUAWEI Kirin9030S\\n");
+    seq_printf(m, "Hardware\\t: HUAWEI Pura 90 Pro Max\\n");
 
     return 0;
 }"""
@@ -85,8 +81,59 @@ with open(target, 'w') as f:
 
 with open(target) as f:
     check = f.read()
-if 'fake_midr' in check and 'Kirin9030S' in check and 'CPU physical' in check:
-    print("VERIFIED! Spoof ready.")
+if 'fake_midr' in check and 'Pura 90 Pro Max' in check:
+    print("  [OK] cpuinfo patched")
 else:
-    print("FAILED!")
+    print("  [FAIL] cpuinfo not patched!")
     sys.exit(1)
+
+# ===== 2. 伪装 /sys/devices/soc0/machine =====
+target2 = 'drivers/soc/qcom/socinfo.c'
+print(f"[2/2] Patching {target2}...")
+
+with open(target2) as f:
+    content2 = f.read()
+
+# 找到 socinfo_machine 函数
+old_func = '''static const char *socinfo_machine(struct device *dev, unsigned int id)
+{
+\tint idx;
+
+\tfor (idx = 0; idx < ARRAY_SIZE(soc_id); idx++) {
+\t\tif (soc_id[idx].id == id)
+\t\t\treturn soc_id[idx].name;
+\t}
+
+\treturn NULL;
+}'''
+
+new_soc_func = '''static const char *socinfo_machine(struct device *dev, unsigned int id)
+{
+\treturn "SCA-AL00";
+}'''
+
+if old_func in content2:
+    content2 = content2.replace(old_func, new_soc_func)
+    print("  [OK] socinfo patched (exact match)")
+else:
+    # tab vs spaces fallback
+    pattern = r'static const char \*socinfo_machine$struct device \*dev, unsigned int id$\s*\{.*?\n\}'
+    m = re.search(pattern, content2, re.DOTALL)
+    if m:
+        content2 = content2[:m.start()] + new_soc_func + content2[m.end():]
+        print("  [OK] socinfo patched (regex)")
+    else:
+        print("  [WARN] socinfo_machine not found, skipping")
+
+with open(target2, 'w') as f:
+    f.write(content2)
+
+# ===== 验证 =====
+with open(target2) as f:
+    check2 = f.read()
+if 'SCA-AL00' in check2:
+    print("  [OK] socinfo verified")
+else:
+    print("  [WARN] socinfo may not be applied")
+
+print("\n=== All spoofing patches applied ===")
